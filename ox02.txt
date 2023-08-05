@@ -1,0 +1,3 @@
+18 20 tanh 
+20 20 tanh 
+20 1 tanh 
