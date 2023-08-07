@@ -46,8 +46,7 @@ class node:
             self.value=nmax(self,i.bianli(deep+1,self))
             if self.cancut():
                 #print(f"deep{deep},value{self.value},ab{self.ab},p{previous},cut")
-                #break
-                pass
+                break
 
         #print(f"deep{deep},value{self.value},out")
         return self.value
@@ -63,7 +62,9 @@ class node:
     def mcts(self,times):
         self.next=[]
         for i in range(1,times+1):
+            #print(f"maintime{i}")
             self.mctsingle(i)
+            #print("\n")
 
     def mctsingle(self,maintimes,deep=0):
         self.times+=1
@@ -83,13 +84,12 @@ class node:
         if nononeflag and self.evalnode(True) is None:
             #print(f"in deep{self.deep}")
             return self.getbestnext(maintimes).mctsingle(maintimes,deep+1)  # 不返回值，只是作为出口
-
         value=self.value
         a = self.previous
         while a is not None and deep>0:
+            value = -value
             a.value+=value
-            #print(f"back deep{a.deep},value{a.value}")
-            value=-value
+            #print(f"back deep{a.deep},value{value}")
             a=a.previous
             deep-=1
 
@@ -101,13 +101,13 @@ class node:
         :return: 返回self.next中信心上限（或是其它的值）最高的节点
         '''
         #print(self.deep,"search")
-        a=dict()
+        a=[]
         for i in self.next:
-            a[i.ucb(maintimes)]=i
-        return a[max(a)]
+            a.append((i.ucb(maintimes),i))
+        return max(a,key=lambda x:x[0])[1]
 
     def ucb(self,maintimes):
-        #print(f"ucb,value{self.value},times{self.times},maintimes{maintimes}")
+        #print(f"ucb,value{self.value},times{self.times},maintimes{maintimes},ucb{self.value+(2*np.log(maintimes)/self.times)**0.5}")
         return self.value+(2*np.log(maintimes)/self.times)**0.5
 
     def randsimulate(self):
@@ -180,8 +180,10 @@ class oxtest(node):
         return a
 
     def randsimulate(self):
-        a=oxtest.newgame("rvr",self.board,self.side,look=False)
-        a.computerside=self.side
+        a=oxtest.newgame("rvr",self.board,self.side,look=False,modelname="ox02")
+        a.computerside="o" if self.side=="x" else "x"
+        #print("look",self.side,a.evalnode(False))
+        #a.look()
         return a.evalnode(False)
 
     def evalnode(self,firsttime):
@@ -229,15 +231,18 @@ class oxtest(node):
     def run(self):
         if self.board==[['','',''],['','',''],['','','']]:  # save time
             return self.chess([0,0])
+        #self.next=[]
         a=self.bianli()
         #print(f"predict{a},side{self.computerside},{[i.value for i in self.next]}")
         for i in self.next:
             if i.value==a:
-                return i
+                b=self.chess(i.chesspos)
+                return b
         print("err")
 
     def mctsrun(self,time):
         self.mcts(time)
+        #print([(i.times,i.value) for i in self.next])
         return self.chess(max(self.next,key=lambda x:x.times).chesspos)
 
     def human(self):
